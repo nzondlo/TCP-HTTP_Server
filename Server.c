@@ -3,7 +3,7 @@
  *
  *   Created on: Mar 08, 2013
  *       Author: Nathan Zondlo
- *       		 Zachary Swartwood
+ *       	 Zachary Swartwood
  *   Assignment: Project 1:
  *  Description:
  *  			 Deliverable 1:
@@ -23,21 +23,21 @@
  *  			 -Error messages printed to stderr using perror()
  *  			 -Handles SIGTERM and SIGINT signals and gracefully exits program
  *
- *				 Deliverable 3:
- *				 -Added functions to make server reusable and readable
- *				 -Fixed error handling
- *				 -Logging now in function and now works properly
+ *			 Deliverable 3:
+ *			 -Added functions to make server reusable and readable
+ *			 -Fixed error handling
+ *			 -Logging now in function and now works properly
  */
 
 /* Libraries to include */
-#include <stdio.h>				//Standard Input/Output
-#include <stdlib.h>				//Standard Library
-#include <errno.h>				//Error Handling
+#include <stdio.h>			//Standard Input/Output
+#include <stdlib.h>			//Standard Library
+#include <errno.h>			//Error Handling
 #include <string.h> 			//String function Library
 #include <netinet/in.h>			//Network sockets
 #include <sys/socket.h>			//System sockets
 #include <unistd.h>
-#include <time.h>				//Time and Date functions
+#include <time.h>			//Time and Date functions
 #include <signal.h> 			// for the signal function
 
 
