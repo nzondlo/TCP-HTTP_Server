@@ -98,12 +98,12 @@ void setSignalHandler(){
 	sigemptyset( &sig.sa_mask );
 
 	// handle SIGINT differently
-	if ( sigaction( SIGINT, &sig, NULL ) == EINVAL){
+	if ( sigaction( SIGINT, &sig, NULL ) == -1 ){
 		logMessage("Error assigning the handler for SIGINT\n");
 	}
 
 	// handle SIGTERM differently
-	if ( sigaction( SIGTERM, &sig, NULL ) == EINVAL ){
+	if ( sigaction( SIGTERM, &sig, NULL ) == -1 ){
 		logMessage("Error assigning the handler for SIGTERM\n");
 	}
 }
@@ -115,13 +115,8 @@ char * getTime(char * tempTimer){
 	time_t 	timer;
 	timer = time(NULL);
 
-	/* Temporary string for date construction */
-	char 	temp[50];
-	memset(&temp, 0, sizeof( temp ));
-
 	/* Formats timer into time and stores it in tempTimer */
-	strftime(temp, 50, "%I:%M:%S %p ", localtime(&timer));
-	strcpy(tempTimer, temp);
+	strftime(tempTimer, 50, "%I:%M:%S %p ", localtime(&timer));
 	return tempTimer;
 }
 
@@ -132,13 +127,8 @@ char * getDate(char * tempTimer){
 	time_t 	timer;
 	timer = time(NULL);
 
-	/* Temporary string for date construction */
-	char 	temp[50];
-	memset(&temp, 0, sizeof ( temp ));
-
 	/* Formats timer into date and stores it in tempTimer */
-	strftime(temp, 50, "%b %d %Y ", localtime(&timer));
-	strcpy(tempTimer, temp);
+	strftime(tempTimer, 50, "%b %d %Y ", localtime(&timer));
 	return tempTimer;
 }
 
@@ -167,7 +157,7 @@ void logMessage(char *message){
 		perror("File did not open");
 	else{
 		fprintf(logFile, "%s %s - %s\n", getDate(tempDate), getTime(tempTime), message);
-		if((result = fclose(logFile)) == EOF){
+		if((result = fclose(logFile)) == EOF){		//close file
 			perror("File failed to close");
 		}
 	}
@@ -217,27 +207,26 @@ int portAssign(int *port, int argc, char **argv){
 	return 0;
 }
 
-/* Sets the port, binds and listens*/
-int setSocket(int *result, int port){
+/*
+ * Sets the port, binds and listens
+ * Any return other than 'sockfd' at the end of the function is a failure
+ */
+int setSocket(int port){
 
 	char 	temp[255];
+	int 	result;
+
+	/* File Descriptor for socket */
 	int 	sockfd;
 
-	/*
-	 * if result was an error
-	 * 		sockfd is an error
-	 * else
-	 * 		construct socket
-	 */
-	if (*result == -1){
-			sockfd = -1;
-	}else{
-		/* Declare/Initialize socket */
-		sockfd = socket( AF_INET, SOCK_STREAM, 0 );
-		snprintf(temp, sizeof(temp),"Socket Started - port number: %d", port);
-		logMessage(temp);
-	}
-	checkError(sockfd, SOCKET_ASSIGN_STATUS);
+
+	/* Declare/Initialize socket */
+	sockfd = socket( AF_INET, SOCK_STREAM, 0 );
+	snprintf(temp, sizeof(temp),"Socket Started - port number: %d", port);
+	logMessage(temp);
+
+	if(sockfd == -1){return sockfd;};
+
 
 	/* declare address variable */
 	struct sockaddr_in    address;
@@ -250,13 +239,22 @@ int setSocket(int *result, int port){
 
 
 	/* Bind socket */
-	*result = bind( sockfd, (struct sockaddr *) &address, sizeof( address ) );
-	checkError(*result, SOCKET_BIND_STATUS);
+	result = bind( sockfd, (struct sockaddr *) &address, sizeof( address ) );
+	checkError(result, SOCKET_BIND_STATUS);
+	if (result == -1)return result;
 
-	/* listen for socket, maximum 5 connections */
-	*result = listen(sockfd, 5);
-	if(*result != -1) printf("Server started on %d...\n", port);
-	checkError(*result, SOCKET_LISTEN_STATUS);
+	/*
+	 * listen for socket, maximum 5 connections
+	 * returns -1 if unsuccessful
+	 */
+	result = listen(sockfd, 5);
+	checkError(result, SOCKET_LISTEN_STATUS);
+	if(result != -1){
+		printf("Server started on %d...\n", port);
+	}else{
+		return result;
+	}
+
 
 	return sockfd;
 }
@@ -359,14 +357,13 @@ void clientConversation(int clientfd){
  * This loop signifies where the server part actually starts
  * Will keep looping to ask for input until server is killed manually
  *
- * Initialize global var Exit to 0
-*/
-void runServer(int sockfd, int *Exit){
+ */
+void runServer(int sockfd){
 
 	/* File Descriptor for client connection*/
 	int 	clientfd;
 
-	while(*Exit == 0)
+	while(Exit == 0)
 	{
 
 		/* declare a variables for the client address */
@@ -378,8 +375,7 @@ void runServer(int sockfd, int *Exit){
 
 		/* call accept to get a connection */
 		clientfd = accept( sockfd, (struct sockaddr *) &client_addr, (unsigned int *) &client_addr_len );
-		if(*Exit == 1)
-			break;
+		if(Exit) break;
 
 		/* Error check on the connected client */
 		if(clientfd != -1) printf("Client connected...\n");
@@ -404,21 +400,24 @@ int main(int argc, char **argv)
 	/* Used for creating and binding the socket */
 	int socketID;
 
+	/* Initialize our global for our signal handler */
+	Exit = 0;
+
 	/* Sets the signals */
 	setSignalHandler();
 
 	/* Assigns the port and checks error */
 	result = portAssign(&port, argc, argv);
 	checkError(result, PORT_ASSIGN_STATUS);
+	if(result == -1) return (1);
 
 	/* Construct socket, binds and listens */
-	socketID = setSocket(&result, port);
-	if(socketID == -1)
-		return (1);
+	socketID = setSocket(port);
+	checkError(result, SOCKET_ASSIGN_STATUS);
+	if(socketID == -1) return (1);
 
 	/* Accepts clients and allows communication*/
-	Exit = 0;
-	runServer(socketID, &Exit);
+	runServer(socketID);
 
 	/* Close socket connection */
 	result = close( socketID );
