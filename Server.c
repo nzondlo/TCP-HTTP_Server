@@ -421,8 +421,8 @@ int main(int argc, char **argv)
 
 	/* Close socket connection */
 	result = close( socketID );
-	if(result != -1) printf("Server closed.\n");
 	checkError(result, SOCKET_CLOSE_STATUS);
+	if(result != -1) printf("Server closed.\n");
 
 	/* Log final message and end program */
 	logMessage("Close Program\n");
